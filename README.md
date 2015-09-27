@@ -9,3 +9,6 @@ Featuring vagrant development environment including:
 * ES6+
 * PostCSS
 * Stylus
+
+Known issues:
+* hot reloading not working through Vagrant VM; still working fine locally
