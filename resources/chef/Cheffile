@@ -5,4 +5,4 @@ site 'https://supermarket.getchef.com/api/v1'
 
 cookbook "frontend-standard-stack",
   :git => "https://github.com/bartlomn/frontend-standard-stack",
-  :ref => "v0.1.2"
+  :ref => "v0.1.4"
