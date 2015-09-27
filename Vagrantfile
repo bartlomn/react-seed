@@ -5,7 +5,8 @@
 Vagrant.require_version '>= 1.7.4'
 
 # Automatically install required Vagrant plugins
-required_plugins = %w(vagrant-bindfs vagrant-cachier vagrant-librarian-chef vagrant-omnibus vagrant-share vagrant-vbguest vagrant-triggers)
+required_plugins = %w(vagrant-bindfs vagrant-cachier vagrant-librarian-chef vagrant-omnibus
+    vagrant-share vagrant-vbguest vagrant-triggers vagrant-gatling-rsync)
 
 plugins_to_install = required_plugins.select { |plugin| not Vagrant.has_plugin? plugin }
 if not plugins_to_install.empty?
@@ -21,10 +22,11 @@ end
 Vagrant.configure(2) do |config|
   config.vm.box = "ubuntu/trusty64"
 
-  config.vm.network "forwarded_port", guest: 9090, host: 9090
-  config.vm.network :private_network, type: 'dhcp'
+  config.vm.network "private_network", ip: "10.11.12.13"
 
-  config.vm.synced_folder ".", "/project_data"
+  config.vm.synced_folder ".", "/project_data", type: "rsync",
+    rsync__exclude: [".git/", ".idea/", ".vagrant/", "node_modules/", "resources/chef/", "logs/"],
+    rsync__verbose: true
 
   config.vm.provider "virtualbox" do |vb|
       vb.gui = false
@@ -34,6 +36,13 @@ Vagrant.configure(2) do |config|
   # Disable berkshelf plugin if present
   if Vagrant.has_plugin?('vagrant-berkshelf')
     config.berkshelf.enabled = false
+  end
+
+  # Configure the window for gatling to coalesce writes.
+  if Vagrant.has_plugin?("vagrant-gatling-rsync")
+    config.gatling.latency = 0.5
+    config.gatling.time_format = "%H:%M:%S"
+    config.gatling.rsync_on_startup = true
   end
 
   config.cache.auto_detect = true
@@ -62,14 +71,16 @@ Vagrant.configure(2) do |config|
 
   # clean up after destroying vm
   config.trigger.after :destroy do
-      run "rm -Rf tmp/*"
+      run "rm -Rf resources/chef/tmp/"
   end
 
-  # launch browser after successful startup
+  # Post-provisioning actions
   config.trigger.after [:up, :reload, :provision] do
-    info "Opening host browser at 'http://localhost:9090'"
-    sleep 3
-    run "open 'http://localhost:9090'"
+    sleep 5
+    info "Opening host browser..."
+    run "open 'http://10.11.12.13:9090'"
+    info "Watching host filesystem for changes..."
+    run "vagrant gatling-rsync-auto"
   end
 
 end

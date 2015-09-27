@@ -14,7 +14,7 @@ class Foo extends Component {
   render() {
     return (
       <div>
-        <h1>Hello, this is React!</h1>
+        <h1>Hello, this is react.</h1>
         Count is {this.state.count}
       </div>
     )
