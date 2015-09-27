@@ -1,82 +1,76 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-# All Vagrant configuration is done below. The "2" in Vagrant.configure
-# configures the configuration version (we support older styles for
-# backwards compatibility). Please don't change it unless you know what
-# you're doing.
-Vagrant.configure(2) do |config|
-  # The most common configuration options are documented and commented below.
-  # For a complete reference, please see the online documentation at
-  # https://docs.vagrantup.com.
+# Are we running correct version?
+Vagrant.require_version '>= 1.7.4'
 
-  # Every Vagrant development environment requires a box. You can search for
-  # boxes at https://atlas.hashicorp.com/search.
+# Automatically install required Vagrant plugins
+required_plugins = %w(vagrant-bindfs vagrant-cachier vagrant-librarian-chef vagrant-omnibus vagrant-share vagrant-vbguest vagrant-triggers)
+
+plugins_to_install = required_plugins.select { |plugin| not Vagrant.has_plugin? plugin }
+if not plugins_to_install.empty?
+  puts "Installing plugins: #{plugins_to_install.join(' ')}"
+  if system "vagrant plugin install #{plugins_to_install.join(' ')}"
+    exec "vagrant #{ARGV.join(' ')}"
+  else
+    abort "Installation of one or more plugins has failed. Aborting."
+  end
+end
+
+# Vagrant config
+Vagrant.configure(2) do |config|
   config.vm.box = "ubuntu/trusty64"
 
-  # Disable automatic box update checking. If you disable this, then
-  # boxes will only be checked for updates when the user runs
-  # `vagrant box outdated`. This is not recommended.
-  # config.vm.box_check_update = false
+  config.vm.network "forwarded_port", guest: 9090, host: 9090
+  config.vm.network :private_network, type: 'dhcp'
 
-  # Create a forwarded port mapping which allows access to a specific port
-  # within the machine from a port on the host machine. In the example below,
-  # accessing "localhost:8080" will access port 9090 on the guest machine.
-  config.vm.network "forwarded_port", guest: 9090, host: 8080, auto_correct: true
-
-  # Create a private network, which allows host-only access to the machine
-  # using a specific IP.
-  config.vm.network "private_network", ip: "10.11.12.13"
-
-  # Create a public network, which generally matched to bridged network.
-  # Bridged networks make the machine appear as another physical device on
-  # your network.
-  # config.vm.network "public_network"
-
-  # Share an additional folder to the guest VM. The first argument is
-  # the path on the host to the actual folder. The second argument is
-  # the path on the guest to mount the folder. And the optional third
-  # argument is a set of non-required options.
   config.vm.synced_folder ".", "/project_data"
 
-  # Provider-specific configuration so you can fine-tune various
-  # backing providers for Vagrant. These expose provider-specific options.
-  # Example for VirtualBox:
-
   config.vm.provider "virtualbox" do |vb|
-  # Display the VirtualBox GUI when booting the machine
-  vb.gui = false
-
-  # Customize the amount of memory on the VM:
-  vb.memory = "1024"
+      vb.gui = false
+      vb.memory = "1024"
   end
 
-  # View the documentation for the provider you are using for more
-  # information on available options.
+  # Disable berkshelf plugin if present
+  if Vagrant.has_plugin?('vagrant-berkshelf')
+    config.berkshelf.enabled = false
+  end
 
-  # Define a Vagrant Push strategy for pushing to Atlas. Other push strategies
-  # such as FTP and Heroku are also available. See the documentation at
-  # https://docs.vagrantup.com/v2/push/atlas.html for more information.
-  # config.push.define "atlas" do |push|
-  #   push.app = "YOUR_ATLAS_USERNAME/YOUR_APPLICATION_NAME"
-  # end
-
-  # Enable provisioning with a shell script. Additional provisioners such as
-  # Puppet, Chef, Ansible, Salt, and Docker are also available. Please see the
-  # documentation for more information about their specific syntax and use.
-  config.vm.provision "shell", inline: <<-SHELL
-    sudo apt-get update
-    sudo apt-get upgrade-dist --yes
-    sudo apt-get install curl --yes
-    curl -L https://www.opscode.com/chef/install.sh | sudo bash
-  SHELL
+  config.cache.auto_detect = true
+  config.omnibus.chef_version = '12.4.2'
+  config.omnibus.cache_packages = true
+  config.librarian_chef.cheffile_dir = 'resources/chef'
 
   config.vm.provision :chef_solo do |chef|
-      # Paths to your cookbooks (on the host)
-      chef.cookbooks_path = ["cookbooks"]
-      # Add chef recipes
-      chef.add_recipe 'git' # Is required for NPM
-      chef.add_recipe 'nodejs'
+      chef.cookbooks_path = ['resources/chef/cookbooks']
+      chef.json = {
+        'frontend-standard-stack' => {
+            'node' => {
+                'version' => '4.1.1'
+            },
+            'project' => {
+                'dir' => '/project_data',
+                'log_dir' => '/project_data/logs',
+                'postinstall_cmd' => 'npm run dev'
+            }
+        }
+      }
+      chef.add_recipe 'frontend-standard-stack::default'
+      chef.add_recipe 'frontend-standard-stack::npm-install'
+      chef.add_recipe 'frontend-standard-stack::run-postinstall'
+  end
+
+  # clean up after destroying vm
+  config.trigger.after :destroy do
+      run "rm -Rf tmp/*"
+  end
+
+  # launch browser after successful startup
+  config.trigger.after [:up, :reload, :provision] do
+    info "Opening host browser at 'http://localhost:9090'"
+    sleep 3
+    run "open 'http://localhost:9090'"
   end
 
 end
+

@@ -85,5 +85,7 @@ $RECYCLE.BIN/
 
 ### librarian-chef ###
 # librarian-chef - https://github.com/applicationsonline/librarian-chef
+Cheffile.lock
 .tmp/
-tmp/
+resources/chef/cookbooks/*
+resources/chef/tmp/*

@@ -7,3 +7,5 @@ Featuring vagrant development environment including:
 * Nodejs
 * Dev server with hot reloading using Webpack/Babel
 * ES6+
+* PostCSS
+* Stylus
