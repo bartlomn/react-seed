@@ -60,7 +60,7 @@ Vagrant.configure(2) do |config|
             'project' => {
                 'dir' => '/project_data',
                 'log_dir' => '/project_data/logs',
-                'postinstall_cmd' => 'npm run dev'
+                'postinstall_cmd' => 'npm start'
             }
         }
       }

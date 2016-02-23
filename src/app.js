@@ -1,4 +1,5 @@
-import React from 'react';
+import React from 'react'
+import {render} from 'react-dom'
 import Foo from './Foo';
 
-React.render(<Foo/>, document.body);
+render(<Foo/>, document.getElementById('root'));

@@ -89,3 +89,6 @@ Cheffile.lock
 .tmp/
 resources/chef/cookbooks/*
 resources/chef/tmp/*
+
+### compiled artifacts ###
+public/*
