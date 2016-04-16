@@ -1,4 +1,5 @@
-# React-Seed
+# React-Seed [deprecated]
+
 
 This is a seed for react-based frontend projects.
 ---
